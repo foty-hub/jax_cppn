@@ -1,0 +1,22 @@
+[project]
+name = "jax-cppn"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Alex Inch", email = "ucabaj7@ucl.ac.uk" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "jax>=0.5.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "matplotlib>=3.10.1",
+]
