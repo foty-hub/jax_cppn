@@ -4,40 +4,32 @@ import warnings
 
 
 def product_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.prod(arr)
+    return jnp.prod(x)
 
 
 def sum_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.sum(arr)
+    return jnp.sum(x)
 
 
 def max_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.max(arr)
+    return jnp.max(x)
 
 
 def min_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.min(arr)
+    return jnp.min(x)
 
 
 def maxabs_aggregation(x):
-    arr = jnp.array(x)
-    # Find the index of the element with the maximum absolute value
-    index = jnp.argmax(jnp.abs(arr))
-    return arr[index]
+    # Return the element in x with the maximum absolute value
+    return x[jnp.argmax(jnp.abs(x))]
 
 
 def median_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.median(arr)
+    return jnp.median(x)
 
 
 def mean_aggregation(x):
-    arr = jnp.array(x)
-    return jnp.mean(arr)
+    return jnp.mean(x)
 
 
 class InvalidAggregationFunction(TypeError):
