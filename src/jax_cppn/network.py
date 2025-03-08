@@ -3,22 +3,14 @@ import jax.numpy as jnp
 import jax
 from jax_cppn.activations import ActivationFunctionSet
 from jax_cppn.aggregations import AggregationFunctionSet
-from jax_cppn.node import Node
+from jax_cppn.node import Node, InputNode
+from jax_cppn.vis import visualize_cppn_network
+import matplotlib.pyplot as plt
 
 # %%
 # Get function sets for activations and aggregations.
 activations = ActivationFunctionSet()
 aggregations = AggregationFunctionSet()
-
-
-# Define an input node type that simply passes its external input
-class InputNode(Node):
-    def __init__(self, node_id: int):
-        super().__init__(
-            activation=activations.get("identity"),
-            aggregation=aggregations.get("identity"),
-            node_id=node_id,
-        )
 
 
 # A simple connection structure: each connection carries a weight from one node to another.
@@ -142,28 +134,12 @@ if __name__ == "__main__":
     input_node1 = InputNode(1)
 
     # Create three hidden nodes, each with a different activation and aggregation.
-    hidden_node1 = Node(
-        activation=activations.get("sigmoid"),
-        aggregation=aggregations.get("sum"),
-        node_id=2,
-    )
-    hidden_node2 = Node(
-        activation=activations.get("tanh"),
-        aggregation=aggregations.get("product"),
-        node_id=3,
-    )
-    hidden_node3 = Node(
-        activation=activations.get("relu"),
-        aggregation=aggregations.get("mean"),
-        node_id=4,
-    )
+    hidden_node1 = Node(activation="sigmoid", aggregation="sum", node_id=2)
+    hidden_node2 = Node(activation="tanh", aggregation="product", node_id=3)
+    hidden_node3 = Node(activation="relu", aggregation="mean", node_id=4)
 
     # Create an output node. For this example, we use identity activation and max aggregation.
-    output_node = Node(
-        activation=activations.get("identity"),
-        aggregation=aggregations.get("max"),
-        node_id=5,
-    )
+    output_node = Node(activation="identity", aggregation="max", node_id=5)
 
     # List all nodes in the network.
     nodes = [
@@ -215,4 +191,6 @@ if __name__ == "__main__":
     plt.ylabel("output")
     plt.title("Complex CPPN Network Output")
     plt.show()
+# %%
+visualize_cppn_network(cppn_net)
 # %%
