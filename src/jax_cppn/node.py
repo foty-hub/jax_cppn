@@ -1,7 +1,3 @@
-# import jax
-# import jax.numpy as jnp
-from typing import Callable
-
 from jax_cppn.activations import ActivationFunctionSet
 from jax_cppn.aggregations import AggregationFunctionSet
 

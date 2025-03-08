@@ -1,6 +1,5 @@
 # %%
 import jax.numpy as jnp
-import jax
 from jax_cppn.activations import ActivationFunctionSet
 from jax_cppn.aggregations import AggregationFunctionSet
 from jax_cppn.node import Node, InputNode
@@ -191,6 +190,6 @@ if __name__ == "__main__":
     plt.ylabel("output")
     plt.title("Complex CPPN Network Output")
     plt.show()
+    visualize_cppn_network(cppn_net)
 # %%
-visualize_cppn_network(cppn_net)
 # %%
