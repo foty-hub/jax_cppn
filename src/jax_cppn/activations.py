@@ -6,6 +6,7 @@ https://github.com/CodeReclaimers/neat-python/blob/master/neat/activations.py
 import types
 import jax.numpy as jnp
 import jax
+from typing import Callable
 
 
 def sigmoid_activation(z):
@@ -115,7 +116,7 @@ class ActivationFunctionSet(object):
         validate_activation(function)
         self.functions[name] = function
 
-    def get(self, name):
+    def get(self, name: str) -> Callable:
         f = self.functions.get(name)
         if f is None:
             raise InvalidActivationFunction(
