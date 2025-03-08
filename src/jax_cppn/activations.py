@@ -3,7 +3,6 @@ Basically a copy of NEAT-Python's activation functions
 https://github.com/CodeReclaimers/neat-python/blob/master/neat/activations.py
 """
 
-import math
 import types
 import jax.numpy as jnp
 import jax
