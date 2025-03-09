@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import random
 from jax import jit
 from jax_cppn.node import Node, InputNode, OutputNode
-from jax_cppn.vis import visualize_cppn_network, plot_output
+from jax_cppn.vis import visualize_cppn_graph, plot_output
 
 # TODO: add crossover
 # TODO: add neat style evolution with a fitness function
@@ -429,7 +429,7 @@ def mutate_remove_node(cppn: FunctionalCPPN, node_id: int) -> FunctionalCPPN:
 
     try:
         new_topo = topological_sort(new_nodes, new_connections)
-    except ValueError as e:
+    except ValueError:
         # print("Mutation aborted due to topological sort failure:", e)
         return cppn
 
@@ -560,5 +560,5 @@ if __name__ == "__main__":
 
     output = forward_cppn(cppn_net, inputs)
     plot_output(x_coords, y_coords, output["out"])
-    visualize_cppn_network(cppn_net)
+    visualize_cppn_graph(cppn_net)
 # %%
