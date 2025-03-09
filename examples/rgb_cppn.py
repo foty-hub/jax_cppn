@@ -10,6 +10,7 @@ cppn_net = init_cppn(["x", "y", "d"], ["r", "g", "b"])
 for _ in range(30):
     cppn_net = mutate(cppn_net)
 
+# %%
 res = 128
 x_coords = jnp.linspace(-1, 1, res)
 y_coords = jnp.linspace(-1, 1, res)
@@ -21,6 +22,10 @@ inputs = {"x": XX, "y": YY, "d": DD}
 output = forward_cppn(cppn_net, inputs)
 img_output = jnp.stack([output["r"], output["g"], output["b"]], axis=2)
 plt.imshow(img_output)
+plt.show()
 visualize_cppn_graph(cppn_net)
 # %%
+# %%
+plt.imshow(img_output)
+plt.show()
 # %%
