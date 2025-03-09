@@ -6,7 +6,7 @@ from jax_cppn.node import Node, InputNode
 from jax_cppn.vis import visualize_cppn_network, plot_output
 
 # %%
-ALLOWED_ACTIVATIONS = ["gauss", "sin", "sigmoid"]
+PERMITTED_MUTATIONS = ["gauss", "sin", "sigmoid", "tanh"]
 
 
 # A simple connection structure: each connection carries a weight from one node to another.
@@ -22,8 +22,6 @@ class Connection:
 
 # The CPPN network class: it holds a collection of nodes and connections,
 # builds a graph structure, and computes a forward pass given input values.
-
-
 class CPPN:
     def __init__(self, nodes: list, connections) -> None:
         """
@@ -134,7 +132,7 @@ class CPPN:
         # Create a new node with a new unique node id.
         new_node_id = max(self.nodes.keys()) + 1
         # Here we choose default activation and aggregation; you may randomize these if desired.
-        new_activation = random.choice(ALLOWED_ACTIVATIONS)
+        new_activation = random.choice(PERMITTED_MUTATIONS)
         label = r"$\sigma$" if new_activation == "sigmoid" else None
         new_node = Node(
             activation=new_activation,
