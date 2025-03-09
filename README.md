@@ -15,4 +15,5 @@ This library owes a lot to [NEAT-Python](https://github.com/CodeReclaimers/neat-
 
 ## Multiple outputs
 The framework can handle arbitrary numbers of inputs and outputs, like RGB outputs - see `examples/rgb_cppn.py`
+
 ![Alt text](images/img5.png)
