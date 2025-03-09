@@ -5,7 +5,7 @@ from jax_cppn.node import InputNode, OutputNode
 # TODO: sometimes the graph vis fails to show inputs on the first layer
 
 
-def visualize_cppn_network(cppn_net):
+def visualize_cppn_graph(cppn_net):
     G = nx.DiGraph()
 
     # Create labels for each node:
