@@ -1,11 +1,10 @@
 # %%
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
-import jax
 import jax.numpy as jnp
 import random
 from jax import jit
-from jax_cppn.node import Node, InputNode
+from jax_cppn.node import Node, InputNode, OutputNode
 from jax_cppn.vis import visualize_cppn_network, plot_output
 
 PERMITTED_MUTATIONS = [
@@ -196,7 +195,7 @@ def mutate_add_connection(
 
     for conn in cppn.connections:
         if conn.in_node == in_node and conn.out_node == out_node:
-            print("Connection already exists.")
+            # print("Connection already exists.")
             return cppn
 
     # Simple DFS to check for a cycle.
@@ -211,7 +210,7 @@ def mutate_add_connection(
         return False
 
     if has_path(out_node, in_node, set()):
-        print("Adding this connection would create a cycle. Mutation aborted.")
+        # print("Adding this connection would create a cycle. Mutation aborted.")
         return cppn
 
     if weight is None:
@@ -231,44 +230,110 @@ def mutate_add_connection(
 def validate_cppn(nodes: Dict[int, Node], connections: List[Connection]) -> bool:
     """
     Validate that:
-      - Every node is involved in at least one connection. For input nodes,
-        we require at least one outgoing connection.
+      - Input nodes have at least one outgoing connection.
+      - Output nodes have at least one incoming connection.
+      - Other (hidden) nodes are involved in at least one connection.
       - All nodes are reachable from at least one input node.
+      - Each input node can reach at least one output node.
+      - Every node can reach at least one output node (no dead-end hidden nodes).
     """
-    # Check that each node is connected.
+
+    # --- Existing checks ---
     for nid, node in nodes.items():
         if isinstance(node, InputNode):
             # Input nodes must have at least one outgoing connection.
             if not any(conn.in_node == nid for conn in connections):
-                print(f"Input node {nid} would have no outgoing connections.")
+                # print(f"Input node {nid} would have no outgoing connections.")
+                return False
+        elif isinstance(node, OutputNode):
+            # Output nodes must have at least one incoming connection.
+            if not any(conn.out_node == nid for conn in connections):
+                # print(f"Output node {nid} would have no incoming connections.")
                 return False
         else:
             # Other nodes must appear in at least one connection.
             if not any(
                 conn.in_node == nid or conn.out_node == nid for conn in connections
             ):
-                print(f"Node {nid} would become isolated.")
+                # print(f"Node {nid} would become isolated.")
                 return False
 
-    # Check connectivity: all nodes must be reachable from some input node.
+    # Check that all nodes are reachable from some input node (no fully disconnected subgraphs).
     input_ids = [nid for nid, node in nodes.items() if isinstance(node, InputNode)]
     if not input_ids:
-        print("No input nodes present in the graph.")
+        # print("No input nodes present in the graph.")
         return False
 
-    reachable = set()
+    reachable_from_any_input = set()
     for nid in input_ids:
         stack = [nid]
         while stack:
             current = stack.pop()
-            if current in reachable:
-                continue
-            reachable.add(current)
-            for conn in connections:
-                if conn.in_node == current and conn.out_node not in reachable:
-                    stack.append(conn.out_node)
-    if set(nodes.keys()) != reachable:
-        print("Graph is disconnected: some nodes are unreachable from input nodes.")
+            if current not in reachable_from_any_input:
+                reachable_from_any_input.add(current)
+                for conn in connections:
+                    if (
+                        conn.in_node == current
+                        and conn.out_node not in reachable_from_any_input
+                    ):
+                        stack.append(conn.out_node)
+    if set(nodes.keys()) != reachable_from_any_input:
+        # print("Graph is disconnected: some nodes are unreachable from input nodes.")
+        return False
+
+    # Ensure at least one output node exists.
+    output_ids = [nid for nid, node in nodes.items() if isinstance(node, OutputNode)]
+    if not output_ids:
+        # print("No output nodes present in the graph.")
+        return False
+
+    # Each input node can reach at least one output node.
+    for in_id in input_ids:
+        stack = [in_id]
+        reachable_from_in = set()
+        while stack:
+            current = stack.pop()
+            if current not in reachable_from_in:
+                reachable_from_in.add(current)
+                for conn in connections:
+                    if (
+                        conn.in_node == current
+                        and conn.out_node not in reachable_from_in
+                    ):
+                        stack.append(conn.out_node)
+        # If none of the output nodes is reachable from this input node, fail.
+        if not any(out_id in reachable_from_in for out_id in output_ids):
+            # print(
+            #     f"Input node {in_id} cannot reach any output node. "
+            #     "Network is validly connected but input is effectively unused."
+            # )
+            return False
+
+    # Check that every node can reach an output node ---
+    # Build a reverse adjacency list: for each node, which nodes feed into it?
+    reverse_adj = {nid: [] for nid in nodes}
+    for conn in connections:
+        reverse_adj[conn.out_node].append(conn.in_node)
+
+    # BFS/DFS from each output node in the reverse graph:
+    can_feed_into_output = set()
+    stack = list(output_ids)
+    while stack:
+        current = stack.pop()
+        if current not in can_feed_into_output:
+            can_feed_into_output.add(current)
+            for pred in reverse_adj[current]:
+                if pred not in can_feed_into_output:
+                    stack.append(pred)
+
+    # If any node is not in can_feed_into_output, it cannot reach any output node.
+    all_nodes = set(nodes.keys())
+    dead_end_nodes = all_nodes - can_feed_into_output
+    if dead_end_nodes:
+        # print(
+        #     f"These node(s) cannot feed into any output: {dead_end_nodes}. "
+        #     "No path from them to an output node."
+        # )
         return False
 
     return True
@@ -288,19 +353,19 @@ def mutate_remove_connection(
         if not (conn.in_node == in_node and conn.out_node == out_node)
     ]
     if len(new_connections) == len(cppn.connections):
-        print("No such connection found to remove.")
+        # print("No such connection found to remove.")
         return cppn
 
     if not validate_cppn(cppn.nodes, new_connections):
-        print(
-            "Mutation aborted: removing connection would result in an invalid network."
-        )
+        # print(
+        #     "Mutation aborted: removing connection would result in an invalid network."
+        # )
         return cppn
 
     try:
         new_topo = topological_sort(cppn.nodes, new_connections)
     except ValueError as e:
-        print("Mutation aborted due to topological sort failure:", e)
+        # print("Mutation aborted due to topological sort failure:", e)
         return cppn
 
     new_incoming = build_incoming(cppn.nodes, new_connections)
@@ -317,16 +382,16 @@ def mutate_remove_node(cppn: FunctionalCPPN, node_id: int) -> FunctionalCPPN:
     Remove a node (and all its associated connections) from the network.
     The mutation is aborted if:
       - The node does not exist,
-      - The node is an input node (which we disallow),
+      - The node is an input or output node (which we disallow),
       - Removal would leave any remaining node isolated, or
       - Removal disconnects the network.
     """
     if node_id not in cppn.nodes:
-        print("Node does not exist.")
+        # print("Node does not exist.")
         return cppn
 
-    if isinstance(cppn.nodes[node_id], InputNode):
-        print("Cannot remove input node.")
+    if isinstance(cppn.nodes[node_id], (InputNode, OutputNode)):
+        # print("Cannot remove input or output node.")
         return cppn
 
     new_nodes = {nid: n for nid, n in cppn.nodes.items() if nid != node_id}
@@ -337,13 +402,13 @@ def mutate_remove_node(cppn: FunctionalCPPN, node_id: int) -> FunctionalCPPN:
     ]
 
     if not validate_cppn(new_nodes, new_connections):
-        print("Mutation aborted: removing node would result in an invalid network.")
+        # print("Mutation aborted: removing node would result in an invalid network.")
         return cppn
 
     try:
         new_topo = topological_sort(new_nodes, new_connections)
     except ValueError as e:
-        print("Mutation aborted due to topological sort failure:", e)
+        # print("Mutation aborted due to topological sort failure:", e)
         return cppn
 
     new_incoming = build_incoming(new_nodes, new_connections)
@@ -376,23 +441,43 @@ def mutate(
     elif mutation_choice == 1:
         node_ids = list(cppn.nodes.keys())
         if len(node_ids) < 2:
-            print("Not enough nodes to add a connection.")
+            # print("Not enough nodes to add a connection.")
             return cppn
-        in_node = random.choice(node_ids)
-        out_node = random.choice(node_ids)
-        while out_node == in_node:
-            out_node = random.choice(node_ids)
-        return mutate_add_connection(cppn, in_node, out_node)
+
+        # Build a list of valid (in_node, out_node) pairs.
+        allowed_pairs = []
+        for in_node in node_ids:
+            for out_node in node_ids:
+                if in_node == out_node:
+                    continue
+                # Do not allow connecting two input nodes.
+                if isinstance(cppn.nodes[in_node], InputNode) and isinstance(
+                    cppn.nodes[out_node], InputNode
+                ):
+                    continue
+                # Do not allow connecting two output nodes.
+                if isinstance(cppn.nodes[in_node], OutputNode) and isinstance(
+                    cppn.nodes[out_node], OutputNode
+                ):
+                    continue
+                allowed_pairs.append((in_node, out_node))
+
+        if not allowed_pairs:
+            # print("No valid node pairs available for connection mutation.")
+            return cppn
+
+        chosen_pair = random.choice(allowed_pairs)
+        return mutate_add_connection(cppn, chosen_pair[0], chosen_pair[1])
     elif mutation_choice == 2:
         if not cppn.connections:
-            print("No connections to remove.")
+            # print("No connections to remove.")
             return cppn
         conn = random.choice(cppn.connections)
         return mutate_remove_connection(cppn, conn.in_node, conn.out_node)
     elif mutation_choice == 3:
         node_ids = list(cppn.nodes.keys())
         if not node_ids:
-            print("No nodes to remove.")
+            # print("No nodes to remove.")
             return cppn
         node_id = random.choice(node_ids)
         return mutate_remove_node(cppn, node_id)
@@ -407,7 +492,7 @@ if __name__ == "__main__":
     hidden_node1 = Node(
         activation="sigmoid", aggregation="sum", node_id=3, label=r"$\sigma$"
     )
-    output_node = Node(activation="identity", aggregation="sum", node_id=4, label="out")
+    output_node = OutputNode(4, label="out")
     nodes = [input_node0, input_node1, input_node2, hidden_node1, output_node]
     connections = [
         Connection(in_node=0, out_node=3, weight=0.6),
@@ -419,14 +504,7 @@ if __name__ == "__main__":
     print("Functional network structure:")
     print(cppn_net)
 
-    # cppn_net = mutate(cppn_net)
-    # cppn_net = mutate_add_connection(cppn_net, 0, 4)
-    # cppn_net = mutate_add_node(cppn_net, 1)
-    # cppn_net = mutate_remove_node(cppn_net, 5)  # should check for if it strands a node
-    # cppn_net = mutate_remove_connection(
-    #     cppn_net, 0, 4
-    # )  # should check for if it strands a node
-    for _ in range(30):
+    for _ in range(100):
         cppn_net = mutate(cppn_net)
 
     res = 256
