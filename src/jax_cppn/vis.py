@@ -93,3 +93,12 @@ def layered_layout(cppn_net):
             pos[node_id] = (x, y)
 
     return pos
+
+
+def plot_output(x_coords, y_coords, output) -> None:
+    plt.figure()
+    plt.contourf(x_coords, y_coords, output, cmap="gray", levels=256)
+    plt.xlabel("x")
+    plt.ylabel("output")
+    plt.title("CPPN Network Output")
+    plt.show()
