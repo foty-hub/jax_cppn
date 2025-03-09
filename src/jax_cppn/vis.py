@@ -12,14 +12,7 @@ def visualize_cppn_network(cppn_net):
     # Create labels for each node:
     node_labels = {}
     for node_id, node in cppn_net.nodes.items():
-        if len(cppn_net.incoming[node_id]) == 0:
-            # No incoming connections => input node.
-            node_labels[node_id] = node.label or "in"
-        elif node_id not in source_nodes:
-            # Not a source in any connection => output node.
-            node_labels[node_id] = node.label or "out"
-        else:
-            node_labels[node_id] = node.label or node.act_str
+        node_labels[node_id] = node.label or node.act_str
 
         # Add node with label (we'll override label in drawing with our dict)
         G.add_node(node_id, label=node_labels[node_id])
