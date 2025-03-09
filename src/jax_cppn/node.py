@@ -29,3 +29,10 @@ class InputNode(Node):
         super().__init__(
             activation="identity", aggregation="identity", node_id=node_id, label=label
         )
+
+
+class OutputNode(Node):
+    def __init__(self, node_id: int, aggregation="sum", label: str | None = None):
+        super().__init__(
+            activation="identity", aggregation=aggregation, node_id=node_id, label=label
+        )
