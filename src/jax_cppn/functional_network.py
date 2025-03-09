@@ -7,6 +7,10 @@ from jax import jit
 from jax_cppn.node import Node, InputNode, OutputNode
 from jax_cppn.vis import visualize_cppn_network, plot_output
 
+# TODO: add crossover
+# TODO: add neat style evolution with a fitness function
+# TODO: test different dimensionality inputs
+
 PERMITTED_MUTATIONS = [
     "gauss",
     "sin",
@@ -364,7 +368,7 @@ def mutate_remove_connection(
 
     try:
         new_topo = topological_sort(cppn.nodes, new_connections)
-    except ValueError as e:
+    except ValueError:
         # print("Mutation aborted due to topological sort failure:", e)
         return cppn
 
