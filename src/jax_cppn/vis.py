@@ -1,5 +1,8 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+from jax_cppn.node import InputNode, OutputNode
+
+# TODO: sometimes the graph vis fails to show inputs on the first layer
 
 
 def visualize_cppn_network(cppn_net):
@@ -52,7 +55,7 @@ def layered_layout(cppn_net):
 
     # Initialize input nodes (no incoming edges) to layer 0.
     for node_id in cppn_net.topo_order:
-        if not cppn_net.incoming[node_id]:  # no incoming edges
+        if isinstance(cppn_net.nodes[node_id], InputNode):
             layer_of[node_id] = 0
 
     # Assign layers in topological order:
@@ -65,6 +68,13 @@ def layered_layout(cppn_net):
         for child in children:
             # The child's layer is at least (current_layer + 1)
             layer_of[child] = max(layer_of.get(child, 0), current_layer + 1)
+
+    # Put the output node on the final layer
+    max_layer = max(layer_of.values())
+    # Initialize input nodes (no incoming edges) to layer 0.
+    for node_id in cppn_net.topo_order:
+        if isinstance(cppn_net.nodes[node_id], OutputNode):
+            layer_of[node_id] = max_layer
 
     # 2) Group nodes by their layer.
     layers = {}
