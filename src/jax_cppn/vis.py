@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 def visualize_cppn_network(cppn_net):
     G = nx.DiGraph()
 
-    # Build a set of nodes that have outgoing connections.
-    # (i.e. every node that appears as a source (in_node) in any connection)
-    source_nodes = {conn.in_node for conn in cppn_net.connections}
-
     # Create labels for each node:
     node_labels = {}
     for node_id, node in cppn_net.nodes.items():
