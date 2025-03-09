@@ -510,7 +510,7 @@ if __name__ == "__main__":
     for _ in range(100):
         cppn_net = mutate(cppn_net)
 
-    res = 256
+    res = 128
     x_coords = jnp.linspace(-1, 1, res)
     y_coords = jnp.linspace(-1, 1, res)
     XX, YY = jnp.meshgrid(x_coords, y_coords)
