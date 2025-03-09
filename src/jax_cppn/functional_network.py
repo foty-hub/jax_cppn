@@ -95,45 +95,64 @@ def build_cppn(nodes: list[Node], connections: list[Connection]) -> FunctionalCP
     )
 
 
-def _forward_cppn(cppn: FunctionalCPPN, inputs: dict[int, jnp.array]) -> jnp.array:
+def _forward_cppn(
+    cppn: FunctionalCPPN, inputs: dict[str, jnp.array]
+) -> dict[str, jnp.array]:
     """
     Run a forward pass through the network using a pre-allocated JAX array
     to store intermediate computed node outputs.
 
-    Assumes that node IDs are integers starting at 0 and that all node outputs share the same shape.
+    Assumes that node outputs share the same shape.
+
+    Parameters:
+        - cppn: The CPPN network.
+        - inputs: A dictionary mapping input node labels to their corresponding JAX arrays.
+
+    Returns:
+        A dictionary mapping each output node's label to its computed output.
     """
     # Determine the shape of one input array.
     output_shape = next(iter(inputs.values())).shape
     # Total number of nodes: assume max id + 1.
     n_nodes = max(cppn.nodes.keys()) + 1
 
-    # Pre-allocate a computed array of shape (n_nodes, H, W)
+    # Pre-allocate a computed array of shape (n_nodes, *output_shape)
     computed = jnp.zeros((n_nodes, *output_shape))
 
-    # Set the values for input nodes.
-    for node_id, value in inputs.items():
-        computed = computed.at[node_id].set(value)
+    # Set the values for input nodes by matching labels.
+    for node_id, node in cppn.nodes.items():
+        if isinstance(node, InputNode):
+            if node.label in inputs:
+                computed = computed.at[node_id].set(inputs[node.label])
+            else:
+                raise ValueError(
+                    f"Missing input for input node with label '{node.label}'."
+                )
 
     # Process nodes in the pre-computed topological order.
     for node_id in cppn.topo_order:
         # Skip input nodes (they are already set).
-        if node_id in inputs:
+        if isinstance(cppn.nodes[node_id], InputNode):
             continue
         # Compute the weighted inputs from all incoming connections.
         weighted_inputs = [
             conn.weight * computed[conn.in_node] for conn in cppn.incoming[node_id]
         ]
         # Stack along axis 1 so that the connections dimension is in the middle.
-        stacked = jnp.stack(
-            weighted_inputs, axis=1
-        )  # Shape: (H, num_connections, W) if each computed[...] is (H, W)
+        stacked = jnp.stack(weighted_inputs, axis=1)
         # The aggregation function (e.g. sum) should sum along axis 1.
         aggregated = cppn.nodes[node_id].aggregation(stacked)
         activated = cppn.nodes[node_id].activation(aggregated)
         computed = computed.at[node_id].set(activated)
 
-    # Return the output from the final node (last in topological order).
-    return computed[cppn.topo_order[-1]]
+    # Gather computed outputs for all nodes that are instances of OutputNode.
+    outputs = {}
+    for node_id, node in cppn.nodes.items():
+        if isinstance(node, OutputNode):
+            outputs[node.label] = computed[node_id]
+
+    return outputs
+    # return computed[cppn.topo_order[-1]]
 
 
 # Mark the network argument as static.
@@ -525,7 +544,7 @@ def init_cppn(
 # --- Example usage ---
 
 if __name__ == "__main__":
-    cppn_net = init_cppn(["x", "y", "d"], ["r"])
+    cppn_net = init_cppn(["x", "y", "d"], ["out"])
     print("Functional network structure:")
     print(cppn_net)
 
@@ -537,9 +556,9 @@ if __name__ == "__main__":
     y_coords = jnp.linspace(-1, 1, res)
     XX, YY = jnp.meshgrid(x_coords, y_coords)
     DD = jnp.sqrt(XX**2 + YY**2)
-    inputs = {1: XX, 2: YY, 3: DD}
+    inputs = {"x": XX, "y": YY, "d": DD}
 
     output = forward_cppn(cppn_net, inputs)
-    plot_output(x_coords, y_coords, output)
+    plot_output(x_coords, y_coords, output["out"])
     visualize_cppn_network(cppn_net)
 # %%
