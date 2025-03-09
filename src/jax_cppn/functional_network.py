@@ -1,6 +1,5 @@
 # %%
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
 import jax.numpy as jnp
 import random
 from jax import jit
@@ -28,11 +27,11 @@ class Connection:
 
 @dataclass(frozen=True)
 class FunctionalCPPN:
-    nodes: Dict[int, Node]  # Mapping from node_id to Node.
-    connections: List[Connection]  # List of all connections.
-    topo_order: Tuple[int, ...]  # Topologically sorted order of node ids.
-    incoming: Dict[
-        int, List[Connection]
+    nodes: dict[int, Node]  # Mapping from node_id to Node.
+    connections: list[Connection]  # list of all connections.
+    topo_order: tuple[int, ...]  # Topologically sorted order of node ids.
+    incoming: dict[
+        int, list[Connection]
     ]  # Mapping from node_id to its incoming connections.
 
     def __hash__(self):
@@ -53,8 +52,8 @@ class FunctionalCPPN:
 
 
 def build_incoming(
-    nodes: Dict[int, Node], connections: List[Connection]
-) -> Dict[int, List[Connection]]:
+    nodes: dict[int, Node], connections: list[Connection]
+) -> dict[int, list[Connection]]:
     incoming = {node_id: [] for node_id in nodes}
     for conn in connections:
         incoming[conn.out_node].append(conn)
@@ -62,8 +61,8 @@ def build_incoming(
 
 
 def topological_sort(
-    nodes: Dict[int, Node], connections: List[Connection]
-) -> Tuple[int, ...]:
+    nodes: dict[int, Node], connections: list[Connection]
+) -> tuple[int, ...]:
     in_degree = {node_id: 0 for node_id in nodes}
     for conn in connections:
         in_degree[conn.out_node] += 1
@@ -84,7 +83,7 @@ def topological_sort(
     return tuple(topo_order)
 
 
-def build_cppn(nodes: List[Node], connections: List[Connection]) -> FunctionalCPPN:
+def build_cppn(nodes: list[Node], connections: list[Connection]) -> FunctionalCPPN:
     nodes_dict = {node.node_id: node for node in nodes}
     incoming = build_incoming(nodes_dict, connections)
     topo_order = topological_sort(nodes_dict, connections)
@@ -96,7 +95,7 @@ def build_cppn(nodes: List[Node], connections: List[Connection]) -> FunctionalCP
     )
 
 
-def forward_cppn(cppn: FunctionalCPPN, inputs: Dict[int, jnp.array]) -> jnp.array:
+def forward_cppn(cppn: FunctionalCPPN, inputs: dict[int, jnp.array]) -> jnp.array:
     """
     Run a forward pass through the network using a pre-allocated JAX array
     to store intermediate computed node outputs.
@@ -144,7 +143,7 @@ jit_forward_cppn = jit(forward_cppn, static_argnums=(0,))
 
 
 def mutate_add_node(
-    cppn: FunctionalCPPN, connection_index: Optional[int] = None
+    cppn: FunctionalCPPN, connection_index: int | None = None
 ) -> FunctionalCPPN:
     """
     Split an existing connection by adding a new node.
@@ -188,7 +187,7 @@ def mutate_add_node(
 
 
 def mutate_add_connection(
-    cppn: FunctionalCPPN, in_node: int, out_node: int, weight: Optional[float] = None
+    cppn: FunctionalCPPN, in_node: int, out_node: int, weight: float | None = None
 ) -> FunctionalCPPN:
     """
     Add a new connection from in_node to out_node if it doesn't already exist
@@ -231,7 +230,7 @@ def mutate_add_connection(
     )
 
 
-def validate_cppn(nodes: Dict[int, Node], connections: List[Connection]) -> bool:
+def validate_cppn(nodes: dict[int, Node], connections: list[Connection]) -> bool:
     """
     Validate that:
       - Input nodes have at least one outgoing connection.
@@ -426,7 +425,7 @@ def mutate_remove_node(cppn: FunctionalCPPN, node_id: int) -> FunctionalCPPN:
 
 def mutate(
     cppn: FunctionalCPPN,
-    mutation_probs: Tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
+    mutation_probs: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
 ) -> FunctionalCPPN:
     """
     Randomly mutates the given CPPN using one of the 4 mutation operators,
