@@ -95,7 +95,7 @@ def build_cppn(nodes: list[Node], connections: list[Connection]) -> FunctionalCP
     )
 
 
-def forward_cppn(cppn: FunctionalCPPN, inputs: dict[int, jnp.array]) -> jnp.array:
+def _forward_cppn(cppn: FunctionalCPPN, inputs: dict[int, jnp.array]) -> jnp.array:
     """
     Run a forward pass through the network using a pre-allocated JAX array
     to store intermediate computed node outputs.
@@ -137,7 +137,7 @@ def forward_cppn(cppn: FunctionalCPPN, inputs: dict[int, jnp.array]) -> jnp.arra
 
 
 # Mark the network argument as static.
-jit_forward_cppn = jit(forward_cppn, static_argnums=(0,))
+forward_cppn = jit(_forward_cppn, static_argnums=(0,))
 
 # --- Mutation Operators (Functional Style) ---
 
@@ -486,24 +486,46 @@ def mutate(
         return mutate_remove_node(cppn, node_id)
 
 
+def init_cppn(
+    input_node_labels: list[str],
+    output_node_labels: list[str],
+    hidden_activation: str = "sigmoid",
+    hidden_aggregation: str = "sum",
+):
+    "Builds a simple CPPN with inputs, outputs, and one hidden node to begin mutating"
+    nodes = []
+    connections = []
+
+    # add the hidden node for everything else to connect to
+    hidden = Node(
+        activation=hidden_activation,
+        aggregation=hidden_aggregation,
+        node_id=0,
+    )
+    nodes.append(hidden)
+
+    # Add input nodes
+    next_node_id = 1
+    for label in input_node_labels:
+        node_id = next_node_id
+        nodes.append(InputNode(node_id=node_id, label=label))
+        connections.append(Connection(in_node=node_id, out_node=0, weight=1.0))
+        next_node_id += 1
+
+    # Add output nodes
+    for label in output_node_labels:
+        node_id = next_node_id
+        nodes.append(OutputNode(node_id=node_id, label=label))
+        connections.append(Connection(in_node=0, out_node=node_id, weight=1.0))
+        next_node_id += 1
+
+    return build_cppn(nodes, connections)
+
+
 # --- Example usage ---
 
 if __name__ == "__main__":
-    input_node0 = InputNode(0, label="x")
-    input_node1 = InputNode(1, label="y")
-    input_node2 = InputNode(2, label="d")
-    hidden_node1 = Node(
-        activation="sigmoid", aggregation="sum", node_id=3, label=r"$\sigma$"
-    )
-    output_node = OutputNode(4, label="out")
-    nodes = [input_node0, input_node1, input_node2, hidden_node1, output_node]
-    connections = [
-        Connection(in_node=0, out_node=3, weight=0.6),
-        Connection(in_node=1, out_node=3, weight=0.4),
-        Connection(in_node=2, out_node=3, weight=0.4),
-        Connection(in_node=3, out_node=4, weight=0.8),
-    ]
-    cppn_net = build_cppn(nodes, connections)
+    cppn_net = init_cppn(["x", "y", "d"], ["r"])
     print("Functional network structure:")
     print(cppn_net)
 
@@ -515,9 +537,9 @@ if __name__ == "__main__":
     y_coords = jnp.linspace(-1, 1, res)
     XX, YY = jnp.meshgrid(x_coords, y_coords)
     DD = jnp.sqrt(XX**2 + YY**2)
-    inputs = {0: XX, 1: YY, 2: DD}
+    inputs = {1: XX, 2: YY, 3: DD}
 
-    output = jit_forward_cppn(cppn_net, inputs)
+    output = forward_cppn(cppn_net, inputs)
     plot_output(x_coords, y_coords, output)
     visualize_cppn_network(cppn_net)
 # %%
