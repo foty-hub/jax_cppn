@@ -24,8 +24,5 @@ img_output = jnp.stack([output["r"], output["g"], output["b"]], axis=2)
 plt.imshow(img_output)
 plt.show()
 visualize_cppn_graph(cppn_net)
-# %%
-# %%
-plt.imshow(img_output)
-plt.show()
+
 # %%
