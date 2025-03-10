@@ -251,93 +251,58 @@ def mutate_add_connection(
 
 def validate_cppn(nodes: dict[int, Node], connections: list[Connection]) -> bool:
     """
-    Validate that:
+    Validate the CPPN network by ensuring:
       - Input nodes have at least one outgoing connection.
       - Output nodes have at least one incoming connection.
-      - Other (hidden) nodes are involved in at least one connection.
+      - Hidden nodes are involved in at least one connection.
       - All nodes are reachable from at least one input node.
-      - Each input node can reach at least one output node.
-      - Every node can reach at least one output node (no dead-end hidden nodes).
+      - Every node can eventually feed into an output node.
     """
-
-    # --- Existing checks ---
+    # Basic connectivity: ensure every node participates in a connection.
     for nid, node in nodes.items():
         if isinstance(node, InputNode):
-            # Input nodes must have at least one outgoing connection.
             if not any(conn.in_node == nid for conn in connections):
-                # print(f"Input node {nid} would have no outgoing connections.")
                 return False
         elif isinstance(node, OutputNode):
-            # Output nodes must have at least one incoming connection.
             if not any(conn.out_node == nid for conn in connections):
-                # print(f"Output node {nid} would have no incoming connections.")
                 return False
         else:
-            # Other nodes must appear in at least one connection.
             if not any(
                 conn.in_node == nid or conn.out_node == nid for conn in connections
             ):
-                # print(f"Node {nid} would become isolated.")
                 return False
 
-    # Check that all nodes are reachable from some input node (no fully disconnected subgraphs).
+    # Verify that every node is reachable from some input node.
     input_ids = [nid for nid, node in nodes.items() if isinstance(node, InputNode)]
     if not input_ids:
-        # print("No input nodes present in the graph.")
         return False
 
-    reachable_from_any_input = set()
+    reachable_from_input = set()
     for nid in input_ids:
         stack = [nid]
         while stack:
             current = stack.pop()
-            if current not in reachable_from_any_input:
-                reachable_from_any_input.add(current)
+            if current not in reachable_from_input:
+                reachable_from_input.add(current)
                 for conn in connections:
                     if (
                         conn.in_node == current
-                        and conn.out_node not in reachable_from_any_input
+                        and conn.out_node not in reachable_from_input
                     ):
                         stack.append(conn.out_node)
-    if set(nodes.keys()) != reachable_from_any_input:
-        # print("Graph is disconnected: some nodes are unreachable from input nodes.")
+    if set(nodes.keys()) != reachable_from_input:
         return False
 
-    # Ensure at least one output node exists.
+    # Ensure there is at least one output node.
     output_ids = [nid for nid, node in nodes.items() if isinstance(node, OutputNode)]
     if not output_ids:
-        # print("No output nodes present in the graph.")
         return False
 
-    # Each input node can reach at least one output node.
-    for in_id in input_ids:
-        stack = [in_id]
-        reachable_from_in = set()
-        while stack:
-            current = stack.pop()
-            if current not in reachable_from_in:
-                reachable_from_in.add(current)
-                for conn in connections:
-                    if (
-                        conn.in_node == current
-                        and conn.out_node not in reachable_from_in
-                    ):
-                        stack.append(conn.out_node)
-        # If none of the output nodes is reachable from this input node, fail.
-        if not any(out_id in reachable_from_in for out_id in output_ids):
-            # print(
-            #     f"Input node {in_id} cannot reach any output node. "
-            #     "Network is validly connected but input is effectively unused."
-            # )
-            return False
-
-    # Check that every node can reach an output node ---
-    # Build a reverse adjacency list: for each node, which nodes feed into it?
+    # Check that every node can reach an output node using reverse DFS.
     reverse_adj = {nid: [] for nid in nodes}
     for conn in connections:
         reverse_adj[conn.out_node].append(conn.in_node)
 
-    # BFS/DFS from each output node in the reverse graph:
     can_feed_into_output = set()
     stack = list(output_ids)
     while stack:
@@ -347,15 +312,7 @@ def validate_cppn(nodes: dict[int, Node], connections: list[Connection]) -> bool
             for pred in reverse_adj[current]:
                 if pred not in can_feed_into_output:
                     stack.append(pred)
-
-    # If any node is not in can_feed_into_output, it cannot reach any output node.
-    all_nodes = set(nodes.keys())
-    dead_end_nodes = all_nodes - can_feed_into_output
-    if dead_end_nodes:
-        # print(
-        #     f"These node(s) cannot feed into any output: {dead_end_nodes}. "
-        #     "No path from them to an output node."
-        # )
+    if set(nodes.keys()) != can_feed_into_output:
         return False
 
     return True
