@@ -46,7 +46,7 @@ class InvalidAggregationFunction(TypeError):
     pass
 
 
-def validate_aggregation(function):  # TODO: Recognize when need `reduce`
+def validate_aggregation(function):
     if not isinstance(
         function, (types.BuiltinFunctionType, types.FunctionType, types.LambdaType)
     ):
