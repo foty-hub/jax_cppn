@@ -6,11 +6,12 @@ from jax import jit
 from jax_cppn.node import Node, InputNode, OutputNode
 from jax_cppn.vis import visualize_cppn_graph, plot_output
 
+# TODO: make permitted activations an input to the mutate function
 # TODO: add crossover
 # TODO: add neat style evolution with a fitness function
 # TODO: test different dimensionality inputs
 
-PERMITTED_MUTATIONS = [
+PERMITTED_ACTIVATIONS = [
     "gauss",
     "sin",
     "sigmoid",
@@ -178,7 +179,7 @@ def mutate_add_node(
 
     # Create a new node with a new unique node id.
     new_node_id = max(cppn.nodes.keys()) + 1
-    new_activation = random.choice(PERMITTED_MUTATIONS)
+    new_activation = random.choice(PERMITTED_ACTIVATIONS)
     label = r"$\sigma$" if new_activation == "sigmoid" else None
     new_node = Node(
         activation=new_activation, aggregation="sum", node_id=new_node_id, label=label
