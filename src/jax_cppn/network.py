@@ -523,7 +523,7 @@ if __name__ == "__main__":
     plot_output(x_coords, y_coords, output["out"])
     visualize_cppn_graph(cppn_net)
 
-    # "zoom out" but increasing the extent of XX, YY
+    # "zoom out" by increasing the extent of XX, YY
     # res = 1024
     # x_coords = jnp.linspace(-5, 5, res)
     # y_coords = jnp.linspace(-5, 5, res)
