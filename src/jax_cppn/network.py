@@ -10,6 +10,7 @@ from jax_cppn.vis import visualize_cppn_graph, plot_output
 # TODO: add crossover
 # TODO: add neat style evolution with a fitness function
 # TODO: test different dimensionality inputs
+# TODO: add cppn_saving functionality
 
 PERMITTED_ACTIVATIONS = [
     "gauss",
@@ -502,21 +503,33 @@ def init_cppn(
 # --- Example usage ---
 
 if __name__ == "__main__":
-    cppn_net = init_cppn(["x", "y", "d"], ["out"])
-    print("Functional network structure:")
-    print(cppn_net)
-
-    for _ in range(100):
-        cppn_net = mutate(cppn_net)
-
-    res = 128
+    # initialise the coordinate space
+    res = 256
     x_coords = jnp.linspace(-1, 1, res)
     y_coords = jnp.linspace(-1, 1, res)
     XX, YY = jnp.meshgrid(x_coords, y_coords)
     DD = jnp.sqrt(XX**2 + YY**2)
     inputs = {"x": XX, "y": YY, "d": DD}
 
+    # Start a network with one node
+    cppn_net = init_cppn(["x", "y", "d"], ["out"])
+
+    # (add_node, add_connection, remove_node, remove_connection)
+    mutation_probs = (0.15, 0.6, 0.1, 0.2)
+    for _ in range(50):
+        cppn_net = mutate(cppn_net, mutation_probs)
+
     output = forward_cppn(cppn_net, inputs)
     plot_output(x_coords, y_coords, output["out"])
     visualize_cppn_graph(cppn_net)
+
+    # "zoom out" but increasing the extent of XX, YY
+    # res = 1024
+    # x_coords = jnp.linspace(-5, 5, res)
+    # y_coords = jnp.linspace(-5, 5, res)
+    # XX, YY = jnp.meshgrid(x_coords, y_coords)
+    # DD = jnp.sqrt(XX**2 + YY**2)
+    # inputs = {"x": XX, "y": YY, "d": DD}
+    # output = forward_cppn(cppn_net, inputs)
+    # plot_output(x_coords, y_coords, output["out"])
 # %%
