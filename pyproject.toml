@@ -1,7 +1,7 @@
 [project]
 name = "jax-cppn"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple JAX-powered CPPN library for evolveable networks"
 readme = "README.md"
 authors = [
     { name = "Alex Inch", email = "ucabaj7@ucl.ac.uk" }
@@ -19,5 +19,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "imageio>=2.37.0",
     "ipykernel>=6.29.5",
 ]
